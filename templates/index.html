@@ -1,1 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>SmartExpense AI</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #d63384;
+            --primary2: #b5276d;
+            --pl: #fce8f3;
+            --bg: #fdf4f7;
+            --surface: #ffffff;
+            --border: #f5d0de;
+            --text: #1a1a1a;
+            --text-light: #6b7280;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: linear-gradient(135deg, #0a0a15 0%, #1a0a1a 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text);
+        }
+        
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            width: 100%;
+            max-width: 1200px;
+            height: 100vh;
+            background: var(--surface);
+            box-shadow: 0 25px 50px rgba(0,0,0,0.3);
+        }
+        
+        .left-panel {
+            background: linear-gradient(145deg,#0a0a15,#1a0a1a);
+            padding: 60px 40px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            color: white;
+        }
+        
+        .logo {
+            font-family: 'Playfair Display', serif;
+            font-size: 2.5em;
+            font-weight: 700;
+            margin-bottom: 20px;
+            background: linear-gradient(135deg, #d63384, #ff69b4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .tagline {
+            font-size: 1.1em;
+            color: #bbb;
+            margin-bottom: 40px;
+            line-height: 1.6;
+        }
+        
+        .features {
+            list-style: none;
+        }
+        
+        .features li {
+            margin-bottom: 20px;
+            font-size: 0.95em;
+            color: #ddd;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .features li:before {
+            content: "✨";
+            font-size: 1.3em;
+        }
+        
+        .right-panel {
+            padding: 60px 40px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            background: linear-gradient(to bottom, var(--bg), var(--surface));
+        }
+        
+        .form-container {
+            max-width: 400px;
+        }
+        
+        h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: 2em;
+            margin-bottom: 10px;
+            color: var(--primary);
+        }
+        
+        .form-subtitle {
+            color: var(--text-light);
+            margin-bottom: 30px;
+            font-size: 0.95em;
+        }
+        
+        .form-group {
+            margin-bottom: 18px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--text);
+            font-size: 0.9em;
+        }
+        
+        input[type="email"],
+        input[type="password"],
+        input[type="text"],
+        input[type="number"] {
+            width: 100%;
+            padding: 12px 14px;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            font-size: 1em;
+            font-family: inherit;
+            transition: all 0.3s;
+            background: var(--surface);
+        }
+        
+        input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(214, 51, 132, 0.1);
+        }
+        
+        .captcha-group {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 10px;
+            margin-bottom: 18px;
+        }
+        
+        .captcha-group input {
+            padding: 12px 14px;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+        }
+        
+        button {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, var(--primary), var(--primary2));
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(214, 51, 132, 0.3);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        .toggle-btn {
+            width: 100%;
+            padding: 12px;
+            background: transparent;
+            color: var(--primary);
+            border: 2px solid var(--primary);
+            margin-top: 12px;
+        }
+        
+        .toggle-btn:hover {
+            background: var(--pl);
+        }
+        
+        .demo-btn {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        
+        .error {
+            background: #fee;
+            color: #c33;
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            font-size: 0.9em;
+            display: none;
+        }
+        
+        .success {
+            background: #efe;
+            color: #3c3;
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            font-size: 0.9em;
+            display: none;
+        }
+        
+        .loading {
+            opacity: 0.6;
+            pointer-events: none;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                grid-template-columns: 1fr;
+                height: auto;
+            }
+            .left-panel {
+                padding: 40px 20px;
+                min-height: 300px;
+            }
+            .right-panel {
+                padding: 40px 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="left-panel">
+            <div class="logo">💰 SmartExpense</div>
+            <p class="tagline">AI-powered expense tracking with Telegram bot integration & smart insights</p>
+            <ul class="features">
+                <li>Real-time expense tracking via Telegram</li>
+                <li>Weekly AI-powered insights & tips</li>
+                <li>Smart budget management</li>
+                <li>Beautiful analytics dashboard</li>
+                <li>Completely FREE forever</li>
+            </ul>
+        </div>
+        
+        <div class="right-panel">
+            <div class="form-container">
+                <div id="loginForm">
+                    <h1>Welcome Back!</h1>
+                    <p class="form-subtitle">Log in to your account</p>
+                    <div class="error" id="loginError"></div>
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" id="loginEmail" placeholder="you@example.com">
+                    </div>
+                    <div class="form-group">
+                        <label>Password</label>
+                        <input type="password" id="loginPassword" placeholder="••••••••">
+                    </div>
+                    <div class="captcha-group">
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label style="margin-bottom: 4px;">CAPTCHA</label>
+                            <span id="captchaQuestion" style="font-weight: 600; color: var(--primary);">Loading...</span>
+                        </div>
+                        <input type="number" id="loginCaptcha" placeholder="Answer" style="width: 100px;">
+                    </div>
+                    <button onclick="login()">🔓 Log In</button>
+                    <button class="toggle-btn" onclick="toggleForm()">📝 Create Account</button>
+                    <button class="demo-btn" onclick="demoLogin()">⚡ Try Demo Account</button>
+                </div>
+                
+                <div id="signupForm" style="display: none;">
+                    <h1>Join SmartExpense!</h1>
+                    <p class="form-subtitle">Create your account</p>
+                    <div class="error" id="signupError"></div>
+                    <div class="form-group">
+                        <label>Full Name</label>
+                        <input type="text" id="signupName" placeholder="Your name">
+                    </div>
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" id="signupEmail" placeholder="you@example.com">
+                    </div>
+                    <div class="form-group">
+                        <label>Password</label>
+                        <input type="password" id="signupPassword" placeholder="••••••••">
+                    </div>
+                    <div class="captcha-group">
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label style="margin-bottom: 4px;">CAPTCHA</label>
+                            <span id="captchaQuestion2" style="font-weight: 600; color: var(--primary);">Loading...</span>
+                        </div>
+                        <input type="number" id="signupCaptcha" placeholder="Answer" style="width: 100px;">
+                    </div>
+                    <button onclick="signup()">✨ Create Account</button>
+                    <button class="toggle-btn" onclick="toggleForm()">🔐 Log In</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
+    <script>
+        // Load CAPTCHA on page load
+        window.onload = () => {
+            loadCaptcha();
+        };
+
+        function loadCaptcha() {
+            fetch('/api/captcha').then(r => r.json()).then(d => {
+                document.getElementById('captchaQuestion').textContent = d.question;
+                document.getElementById('captchaQuestion2').textContent = d.question;
+            });
+        }
+
+        function toggleForm() {
+            document.getElementById('loginForm').style.display = 
+                document.getElementById('loginForm').style.display === 'none' ? 'block' : 'none';
+            document.getElementById('signupForm').style.display = 
+                document.getElementById('signupForm').style.display === 'none' ? 'block' : 'none';
+            loadCaptcha();
+        }
+
+        async function login() {
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+            const captcha = document.getElementById('loginCaptcha').value;
+
+            if (!email || !password || !captcha) {
+                showError('All fields required', 'login');
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password, captcha: parseInt(captcha) })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    window.location.href = '/dashboard';
+                } else {
+                    showError(data.error, 'login');
+                }
+            } catch (e) {
+                showError('Connection error', 'login');
+            }
+        }
+
+        async function signup() {
+            const name = document.getElementById('signupName').value;
+            const email = document.getElementById('signupEmail').value;
+            const password = document.getElementById('signupPassword').value;
+            const captcha = document.getElementById('signupCaptcha').value;
+
+            if (!name || !email || !password || !captcha) {
+                showError('All fields required', 'signup');
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/signup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, email, password, captcha: parseInt(captcha) })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    window.location.href = '/dashboard';
+                } else {
+                    showError(data.error, 'signup');
+                }
+            } catch (e) {
+                showError('Connection error', 'signup');
+            }
+        }
+
+        async function demoLogin() {
+            try {
+                const res = await fetch('/api/demo-login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                if (res.ok) {
+                    window.location.href = '/dashboard';
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        function showError(msg, form) {
+            const el = document.getElementById(form === 'login' ? 'loginError' : 'signupError');
+            el.textContent = msg;
+            el.style.display = 'block';
+            setTimeout(() => el.style.display = 'none', 4000);
+        }
+    </script>
+</body>
+</html>
