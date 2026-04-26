@@ -22,8 +22,7 @@ def is_valid_email(email):
 app = Flask(__name__)
 
 app.config['SECRET_KEY']             = os.environ.get('SECRET_KEY', 'fallback-secret')
-db_url = "postgresql://postgres:sQzToICOGpVBvWWzXqpXtoCtyMLwxMfN@shortline.proxy.rlwy.net:26308/railway"
-app.config['SQLALCHEMY_DATABASE_URI'] = db_url
+app.config['SQLALCHEMY_DATABASE_URI']= 'sqlite:///smartexpense.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['JWT_SECRET']             = os.environ.get('JWT_SECRET', 'fallback-jwt')
 app.config['SESSION_COOKIE_SAMESITE']= 'Lax'
@@ -344,14 +343,22 @@ except Exception as e:
 
 
 # ── TELEGRAM FUNCTIONS ────────────────────────────────────────────────────────
+
+# ✅ FIX 1: send_telegram_message ab True/False return karta hai
 def send_telegram_message(chat_id, text):
-    """Send message via Telegram Bot API"""
+    """Send message via Telegram Bot API. Returns True if successful."""
     url = f"{TELEGRAM_API_URL}/sendMessage"
     payload = {"chat_id": chat_id, "text": text, "parse_mode": "HTML"}
     try:
-        requests.post(url, json=payload, timeout=5)
-    except:
-        pass
+        r = requests.post(url, json=payload, timeout=5)
+        result = r.json()
+        if not result.get('ok'):
+            print(f"⚠️ Telegram error: {result.get('description', 'Unknown error')}")
+            return False
+        return True
+    except Exception as e:
+        print(f"⚠️ Telegram send failed: {e}")
+        return False
 
 def parse_telegram_message(text, user_id):
     """Parse Telegram message and handle commands"""
@@ -366,21 +373,26 @@ def parse_telegram_message(text, user_id):
         if len(parts) >= 3:
             cat, amt = parts[0], parts[1]
             desc = ' '.join(parts[2:])
-            if cat in CATEGORIES:
+            # Category case-insensitive match
+            cat_match = next((c for c in CATEGORIES if c.lower() == cat.lower()), None)
+            if cat_match:
                 try:
                     amt = float(amt)
-                    exp = Expense(user_id=user_id, amount=amt, category=cat, 
+                    exp = Expense(user_id=user_id, amount=amt, category=cat_match, 
                                 description=desc, date=date.today(), 
-                                is_surprise=is_surprise(user_id, cat, amt))
+                                is_surprise=is_surprise(user_id, cat_match, amt))
                     db.session.add(exp)
                     u.xp += 10
                     db.session.commit()
                     rem = u.monthly_budget - sum(e.amount for e in Expense.query.filter(
                         Expense.user_id==user_id, 
                         Expense.date>=date(date.today().year, date.today().month, 1)).all())
-                    return f"✅ {cat.upper()} ₹{amt:,.0f} '{desc}' added!\n💰 Remaining: ₹{rem:,.0f}\n⚡ XP: +10"
+                    return f"✅ {cat_match.upper()} ₹{amt:,.0f} '{desc}' added!\n💰 Remaining: ₹{rem:,.0f}\n⚡ XP: +10"
                 except:
                     return "❌ Invalid amount"
+            else:
+                cats_list = ', '.join([c.lower() for c in CATEGORIES])
+                return f"❌ Invalid category '{cat}'.\nValid: {cats_list}"
         return "❌ Format: /expense category amount description\nExample: /expense food 350 lunch"
     
     elif text == '/balance':
@@ -625,7 +637,7 @@ def telegram_webhook():
         text    = msg.get('text', '')
         u = User.query.filter_by(telegram_id=str(chat_id)).first()
         if not u:
-            send_telegram_message(chat_id, "❌ Please link your Telegram account in Dashboard Settings first!")
+            send_telegram_message(chat_id, "❌ Please link your Telegram account in Dashboard Settings first!\n\nSteps:\n1. Copy your Chat ID from bot\n2. Paste it in Dashboard → Settings → Telegram")
             return jsonify({'ok': True})
         response = parse_telegram_message(text, u.id)
         send_telegram_message(chat_id, response)
@@ -744,45 +756,56 @@ def update_budget(u):
     db.session.commit()
     return jsonify({'message':'Budget updated!','budget':u.monthly_budget})
 
+
+# ✅ FIX 2: link_telegram — proper validation + duplicate check + error feedback
 @app.route('/api/telegram/link', methods=['POST'])
 @token_required
-def link_telegram(user):
-    """Link Telegram account"""
-    try:
-        d = request.get_json()
-        telegram_input = d.get('telegram_id', '').strip()
-        
-        if not telegram_input:
-            return jsonify({'error': 'Telegram ID/Username required'}), 400
-        
-        # अगर username है (@riya_goel28) तो समझाओ कि ID चाहिए
-        if telegram_input.startswith('@'):
-            return jsonify({
-                'error': '❌ Please enter Telegram ID (numbers), not username!\n\nTo get your ID:\n1. Send /getid to bot\n2. Bot will give you the ID\n3. Enter that number here'
-            }), 400
-        
-        # ID को convert करो integer में
-        try:
-            telegram_id = int(telegram_input)
-        except:
-            return jsonify({'error': 'Invalid format. Please enter only numbers'}), 400
-        
-        # User को update करो
-        user.telegram_id = telegram_id
-        db.session.commit()
-        
-        # Log करो
-        log_activity('telegram_linked', user.id, f"Telegram ID: {telegram_id}")
-        
+def link_telegram(u):
+    d = request.get_json()
+    telegram_id = d.get('telegram_id', '').strip().strip('@')
+
+    # Validation: sirf numbers allowed
+    if not telegram_id:
+        return jsonify({'error': '❌ Telegram ID required hai!'}), 400
+
+    if not telegram_id.isdigit():
         return jsonify({
-            'message': f'✅ Telegram linked! ID: {telegram_id}',
-            'telegram_id': telegram_id
+            'error': '❌ Telegram ID sirf numbers hona chahiye!\n\nExample: 987654321\n\nApna ID pane ke liye bot pe /start bhejo.'
+        }), 400
+
+    # Duplicate check — koi aur user ne already yeh ID use ki hai?
+    existing = User.query.filter_by(telegram_id=telegram_id).first()
+    if existing and existing.id != u.id:
+        return jsonify({'error': '❌ Yeh Telegram ID already kisi aur account se linked hai!'}), 409
+
+    # Save to DB
+    u.telegram_id = telegram_id
+    db.session.commit()
+    log_activity('telegram_linked', u.id, f"Telegram ID: {telegram_id}")
+
+    # Test message — agar fail hua toh user ko batao
+    success = send_telegram_message(
+        telegram_id,
+        f"✅ <b>SmartExpense se link ho gaya!</b>\n\n"
+        f"Namaste <b>{u.name}</b>! 👋\n\n"
+        f"Ab tum directly bot se expense add kar sakte ho!\n\n"
+        f"Type /help for all commands."
+    )
+
+    if not success:
+        # DB mein save hua, lekin message deliver nahi hua
+        return jsonify({
+            'message': '⚠️ ID save ho gayi, lekin test message fail hua. '
+                       'Check karo ki bot se pehle /start bheja hai ya nahi.',
+            'telegram_id': telegram_id,
+            'warning': True
         })
-    
-    except Exception as e:
-        print(f"Error: {e}")
-        db.session.rollback()
-        return jsonify({'error': str(e)}), 500
+
+    return jsonify({
+        'message': '✅ Telegram successfully linked! Bot pe confirmation message check karo.',
+        'telegram_id': telegram_id
+    })
+
 
 # ── Demo Data ─────────────────────────────────────────────────────────────────
 def _load_demo(user_id):
