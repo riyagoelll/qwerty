@@ -746,16 +746,43 @@ def update_budget(u):
 
 @app.route('/api/telegram/link', methods=['POST'])
 @token_required
-def link_telegram(u):
-    d = request.get_json()
-    telegram_id = d.get('telegram_id', '').strip('@')
-    u.telegram_id = telegram_id
-    db.session.commit()
-    log_activity('telegram_linked', u.id, f"Telegram ID: {telegram_id}")
-    send_telegram_message(telegram_id,
-        f"✅ Linked successfully! Now you can use /expense commands. Type /help for all commands.")
-    return jsonify({'message':'Telegram linked!', 'telegram_id': telegram_id})
-
+def link_telegram(user):
+    """Link Telegram account"""
+    try:
+        d = request.get_json()
+        telegram_input = d.get('telegram_id', '').strip()
+        
+        if not telegram_input:
+            return jsonify({'error': 'Telegram ID/Username required'}), 400
+        
+        # अगर username है (@riya_goel28) तो समझाओ कि ID चाहिए
+        if telegram_input.startswith('@'):
+            return jsonify({
+                'error': '❌ Please enter Telegram ID (numbers), not username!\n\nTo get your ID:\n1. Send /getid to bot\n2. Bot will give you the ID\n3. Enter that number here'
+            }), 400
+        
+        # ID को convert करो integer में
+        try:
+            telegram_id = int(telegram_input)
+        except:
+            return jsonify({'error': 'Invalid format. Please enter only numbers'}), 400
+        
+        # User को update करो
+        user.telegram_id = telegram_id
+        db.session.commit()
+        
+        # Log करो
+        log_activity('telegram_linked', user.id, f"Telegram ID: {telegram_id}")
+        
+        return jsonify({
+            'message': f'✅ Telegram linked! ID: {telegram_id}',
+            'telegram_id': telegram_id
+        })
+    
+    except Exception as e:
+        print(f"Error: {e}")
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
 
 # ── Demo Data ─────────────────────────────────────────────────────────────────
 def _load_demo(user_id):
